@@ -115,7 +115,7 @@ int main(int argc, char* argv[]) {
     // Generate TSR using the script
     std::cout << "\n3. Generating timestamp from FreeTSA..." << std::endl;
     std::string tsrFile = dummyFile + ".tsr";
-    std::string cmd = "./scripts/generate_tsr.sh " + dummyFile + " " + tsrFile;
+    std::string cmd = "../scripts/generate_tsr.sh " + dummyFile + " " + tsrFile;
     int ret = system(cmd.c_str());
     if (ret != 0) {
         std::cerr << "Error: Failed to generate TSR. Make sure you're in the tsa_verification directory." << std::endl;
@@ -129,7 +129,7 @@ int main(int argc, char* argv[]) {
     
     // Load FreeTSA certificate
     std::cout << "5. Loading FreeTSA certificate..." << std::endl;
-    if (!verifier.loadTSACertificate("scripts/freetsa_cert.pem")) {
+    if (!verifier.loadTSACertificate("../scripts/freetsa_cert.pem")) {
         std::cerr << "Error: Failed to load TSA certificate: " 
                   << verifier.getLastError() << std::endl;
         return 1;
