@@ -1,0 +1,175 @@
+name: TSA Verification Tests
+
+# Manual trigger only to avoid overwhelming FreeTSA server
+on:
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        type: boolean
+        description: 'Enable debug output'
+        required: false
+        default: false
+
+jobs:
+  test-ubuntu:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Cache mbedTLS
+      uses: actions/cache@v3
+      id: cache-mbedtls
+      with:
+        path: |
+          /usr/local/lib/libmbed*
+          /usr/local/include/mbedtls
+          /usr/local/include/psa
+          /usr/local/lib/pkgconfig/mbedtls.pc
+          /usr/local/lib/pkgconfig/mbedcrypto.pc
+          /usr/local/lib/pkgconfig/mbedx509.pc
+        key: mbedtls-3.6.0-ubuntu-latest
+        
+    - name: Install system dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y build-essential cmake pkg-config git curl openssl wget
+        
+    - name: Install mbedTLS 3.6.0
+      if: steps.cache-mbedtls.outputs.cache-hit != 'true'
+      run: |
+        echo "Installing mbedTLS 3.6.0..."
+        wget -q https://github.com/Mbed-TLS/mbedtls/releases/download/v3.6.0/mbedtls-3.6.0.tar.bz2
+        tar -xjf mbedtls-3.6.0.tar.bz2
+        cd mbedtls-3.6.0
+        mkdir -p build
+        cd build
+        cmake -DCMAKE_INSTALL_PREFIX=/usr/local \
+              -DUSE_SHARED_MBEDTLS_LIBRARY=On \
+              -DENABLE_PROGRAMS=Off \
+              -DENABLE_TESTING=Off \
+              ..
+        make -j$(nproc)
+        sudo make install
+        sudo ldconfig
+        
+    - name: Verify mbedTLS installation
+      run: |
+        echo "Verifying mbedTLS installation..."
+        pkg-config --modversion mbedtls || echo "mbedTLS not found in pkg-config"
+        ls -la /usr/local/lib/libmbed* || echo "mbedTLS libraries not found"
+        
+    - name: Configure environment
+      run: |
+        echo "PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+        echo "LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+        
+    - name: Build project
+      working-directory: tsa_verification
+      run: |
+        echo "Building TSA verification project..."
+        mkdir -p build
+        cd build
+        cmake ..
+        make -j$(nproc)
+        
+    - name: Verify build artifacts
+      working-directory: tsa_verification
+      run: |
+        echo "Checking build artifacts..."
+        ls -la build/
+        file build/test_tsa
+        ldd build/test_tsa
+        
+    - name: Make scripts executable
+      working-directory: tsa_verification
+      run: |
+        chmod +x scripts/generate_tsr.sh
+        chmod +x demo.sh
+        
+    - name: Run tests with output capture
+      working-directory: tsa_verification
+      run: |
+        echo "Running TSA verification tests..."
+        mkdir -p build/test
+        
+        # Run tests and capture output
+        cd build
+        echo "=== Test Execution Started ===" | tee test_output.log
+        date | tee -a test_output.log
+        echo "" | tee -a test_output.log
+        
+        # Run the test and capture both stdout and stderr
+        ./test_tsa 2>&1 | tee -a test_output.log
+        
+        echo "" | tee -a test_output.log
+        echo "=== Test Execution Completed ===" | tee -a test_output.log
+        date | tee -a test_output.log
+        
+        # Show what files were created
+        echo "" | tee -a test_output.log
+        echo "=== Generated Files ===" | tee -a test_output.log
+        find test/ -type f -ls | tee -a test_output.log
+        
+    - name: Debug output (if enabled)
+      if: ${{ github.event.inputs.debug_enabled == 'true' }}
+      working-directory: tsa_verification
+      run: |
+        echo "=== Debug Information ==="
+        echo "Working directory contents:"
+        ls -la
+        echo ""
+        echo "Build directory contents:"
+        ls -la build/
+        echo ""
+        echo "Test directory contents:"
+        ls -la build/test/ || echo "No test directory found"
+        echo ""
+        echo "Environment variables:"
+        env | grep -E "(PKG_CONFIG|LD_LIBRARY)" || echo "No relevant env vars"
+        
+    - name: Upload test artifacts
+      uses: actions/upload-artifact@v3
+      if: always()  # Upload artifacts even if tests fail
+      with:
+        name: tsa-verification-test-results
+        path: |
+          tsa_verification/build/test_output.log
+          tsa_verification/build/test/
+          tsa_verification/build/test_tsa
+          tsa_verification/build/libtsa_verifier.a
+        retention-days: 30
+        
+    - name: Upload build logs (on failure)
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: build-failure-logs
+        path: |
+          tsa_verification/build/CMakeFiles/CMakeOutput.log
+          tsa_verification/build/CMakeFiles/CMakeError.log
+        retention-days: 7
+        
+    - name: Test summary
+      if: always()
+      working-directory: tsa_verification
+      run: |
+        echo "=== Test Summary ==="
+        if [ -f "build/test_output.log" ]; then
+          echo "Test output log created successfully"
+          echo "Log size: $(wc -l < build/test_output.log) lines"
+          echo ""
+          echo "Last 10 lines of test output:"
+          tail -10 build/test_output.log
+        else
+          echo "No test output log found"
+        fi
+        
+        if [ -d "build/test" ]; then
+          echo ""
+          echo "Test artifacts created:"
+          ls -la build/test/
+        else
+          echo "No test artifacts directory found"
+        fi
