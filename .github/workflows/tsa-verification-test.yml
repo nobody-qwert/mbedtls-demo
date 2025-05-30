@@ -70,7 +70,6 @@ jobs:
         echo "LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
         
     - name: Build project
-      working-directory: tsa_verification
       run: |
         echo "Building TSA verification project..."
         mkdir -p build
@@ -79,7 +78,6 @@ jobs:
         make -j$(nproc)
         
     - name: Verify build artifacts
-      working-directory: tsa_verification
       run: |
         echo "Checking build artifacts..."
         ls -la build/
@@ -87,13 +85,11 @@ jobs:
         ldd build/test_tsa
         
     - name: Make scripts executable
-      working-directory: tsa_verification
       run: |
         chmod +x scripts/generate_tsr.sh
         chmod +x demo.sh
         
     - name: Run tests with output capture
-      working-directory: tsa_verification
       run: |
         echo "Running TSA verification tests..."
         mkdir -p build/test
@@ -118,7 +114,6 @@ jobs:
         
     - name: Debug output (if enabled)
       if: ${{ github.event.inputs.debug_enabled == 'true' }}
-      working-directory: tsa_verification
       run: |
         echo "=== Debug Information ==="
         echo "Working directory contents:"
@@ -139,10 +134,10 @@ jobs:
       with:
         name: tsa-verification-test-results
         path: |
-          tsa_verification/build/test_output.log
-          tsa_verification/build/test/
-          tsa_verification/build/test_tsa
-          tsa_verification/build/libtsa_verifier.a
+          build/test_output.log
+          build/test/
+          build/test_tsa
+          build/libtsa_verifier.a
         retention-days: 30
         
     - name: Upload build logs (on failure)
@@ -151,13 +146,12 @@ jobs:
       with:
         name: build-failure-logs
         path: |
-          tsa_verification/build/CMakeFiles/CMakeOutput.log
-          tsa_verification/build/CMakeFiles/CMakeError.log
+          build/CMakeFiles/CMakeOutput.log
+          build/CMakeFiles/CMakeError.log
         retention-days: 7
         
     - name: Test summary
       if: always()
-      working-directory: tsa_verification
       run: |
         echo "=== Test Summary ==="
         if [ -f "build/test_output.log" ]; then
