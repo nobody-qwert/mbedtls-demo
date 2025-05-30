@@ -9,6 +9,7 @@
 // Forward declarations for mbedTLS types
 typedef struct mbedtls_x509_crt mbedtls_x509_crt;
 typedef struct mbedtls_pk_context mbedtls_pk_context;
+typedef struct mbedtls_pkcs7 mbedtls_pkcs7;
 
 namespace tsa {
 

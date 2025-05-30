@@ -1,7 +1,11 @@
 name: TSA Verification Tests
 
-# Manual trigger only to avoid overwhelming FreeTSA server
+# Runs on every push and also allows manual triggering
 on:
+  push:
+    branches: [ "main", "master", "develop" ]
+  pull_request:
+    branches: [ "main", "master" ]
   workflow_dispatch:
     inputs:
       debug_enabled:
