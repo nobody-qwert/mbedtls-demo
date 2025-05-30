@@ -1,5 +1,7 @@
 # TSA Verification with mbedTLS 3.6
 
+[![TSA Verification Tests](https://github.com/YOUR_USERNAME/YOUR_REPO_NAME/actions/workflows/tsa-verification-test.yml/badge.svg)](https://github.com/YOUR_USERNAME/YOUR_REPO_NAME/actions/workflows/tsa-verification-test.yml)
+
 This project implements Timestamp Authority (TSA) verification using mbedTLS 3.6 for offline verification of binary files according to RFC 3161.
 
 ## Overview
