@@ -1,0 +1,34 @@
+# Ignore build output
+build/
+
+# Ignore installed mbedtls directory
+mbedtls-3.6.0/
+
+# Ignore object files, static and shared libraries
+*.o
+*.a
+*.so
+*.so.*
+
+# Ignore executables
+*.exe
+*.out
+
+# Ignore core dumps
+core
+
+# Ignore logs and temporary files
+*.log
+*.tmp
+*.swp
+*~
+
+# Ignore by-products in subdirectories
+**/CMakeFiles/
+**/CMakeCache.txt
+**/Makefile
+**/cmake_install.cmake
+
+# Ignore test output
+test/*.bin
+test/*.tsr
